@@ -33,13 +33,6 @@ module.exports = sequelize.define(
     {
         tableName: "responses",
         timestamps: true,
-        underscored: false,
-        indexes: [
-            // Create a unique index on email
-            {
-              unique: true,
-              fields: ['userid']
-            }
-        ]
+        underscored: false
     }
 );

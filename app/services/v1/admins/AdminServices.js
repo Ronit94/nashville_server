@@ -105,8 +105,8 @@ AdminServices.AdminLogin = async (req,res,next) =>{
         let isPasswordmatch = await commonFunction.checkPassword(req.body.Password,admin.Password)
 
         if(isPasswordmatch){
-            let dataToEncrypt = { ...{ id: admin.id, adminid: admin.adminid } }
-            admin = _.omit(admin, ['íd','Password', 'adminid', 'createdAt', 'updatedAt']);
+            let dataToEncrypt = { ...{adminid: admin.adminid } }
+            admin = _.omit(admin, ['Password', 'adminid', 'createdAt', 'updatedAt']);
             admin.token = await auth.createAuthToken(dataToEncrypt);
             await Models.admins.update({
                 loggedin:1 

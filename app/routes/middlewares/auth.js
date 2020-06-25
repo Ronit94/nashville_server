@@ -68,6 +68,12 @@ AuthControllers.verifyUserToken = (req, res, next) => {
         return res.status(constants.statuslist.notFound).send(constants.responseObj(undefined,'Token required'))
     }
 
+    if (token.startsWith("Bearer ")){
+        token = token.substring(7, token.length);
+    } else {
+        return res.status(constants.statuslist.exception).send(constants.responseObj(undefined,'Token extraction failed'));
+    }
+
     jwt.verify(token, constants.jwt.secret, (error, decoded) => {
         if (error instanceof Error) {
             if (error.name == 'TokenExpiredError') {
@@ -76,10 +82,10 @@ AuthControllers.verifyUserToken = (req, res, next) => {
                 return res.status(constants.statuslist.exception).send(constants.responseObj(error,'Internal server error'))
             }
         } else {
-            Models.UserSchema.findOne({
+            Models.users.findOne({
                 where: {
-                    City_code : decoded.City_code,
-                    User_ID: decoded.User_ID
+                    id : decoded.id,
+                    userid: decoded.userid
                 }
             })
                 .then((user) => {

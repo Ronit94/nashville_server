@@ -46,13 +46,6 @@ module.exports = sequelize.define(
     {
         tableName: "adverts",
         timestamps: true,
-        underscored: false,
-        indexes: [
-            // Create a unique index on email
-            {
-              unique: true,
-              fields: ['categoryid']
-            }
-        ]
+        underscored: false
     }
 );

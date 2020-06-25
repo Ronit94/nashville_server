@@ -14,7 +14,7 @@ commonFunction.createTable = async () => {
      */
     try {
         for(let Model in Models){
-            await Models[Model].sync({ force: false });
+            await Models[Model].sync({ force: true });
         }
     } catch (e) {
         console.error(`error:${e}`)

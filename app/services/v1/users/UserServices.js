@@ -1,4 +1,4 @@
-const UsersControllers = {},
+const UserServices = {},
     _ = require('lodash'),
     moment = require('moment'),
     Models = require('../../../db/models/Relational/index'),
@@ -12,90 +12,66 @@ const UsersControllers = {},
 
 
 
-UsersControllers.UserRegistration = async (req, res, next) => {
+UserServices.UserRegistration = async (req, res, next) => {
 
 
-    if (_.isNil(req.body.email)) {
+    if (_.isNil(req.body.username)) {
         return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'Email is required'))
     }
 
-    if (_.isNil(req.body.Full_name)) {
-        return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'Name is required'))
-    }
-
-    if (_.isNil(req.body.password)) {
+    if (_.isNil(req.body.Password)) {
         return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'Password is required'))
     }
 
-    if(_.isNil(req.body.city)){
-        return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'City is required'))
-    }
-
-    if(_.isNil(req.body.state)){
-        return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'State is required'))
-    }
-
-    req.body.ProfilePicture = _.isNil(req.body.ProfilePicture) ? '' : req.body.ProfilePicture
-
-    let cityCode = await commonFunction.createCityCode(req.body.city, req.body.state)
-
     try {
-        let password = await commonFunction.createHashPassword(req.body.password);
+        let password = await commonFunction.createHashPassword(req.body.Password);
 
 
-        let findResult = await Models.UserSchema.findOne(
+        let findResult = await Models.users.findOne(
             {
                 where: {
-                    [Op.and]: [
-                        {
-                            User_ID: req.body.email
-                        }, {
-                            City_code : cityCode
-                        }
-                    ]
+                    userid: req.body.username
                 }
             }
         )
+
+        console.log('data',findResult)
 
         if (!_.isEmpty(findResult)) {
             return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'User exists'));
         }
 
-        let result = await Models.UserSchema.create({
-            User_ID: req.body.email,
-            Full_name: req.body.Full_name,
+        let result = await Models.users.create({
+            userid: req.body.username,
+            username: req.body.username,
             Password: password,
-            City_code:cityCode,
-            ProfilePicture: req.body.ProfilePicture
+            resetPin:req.body.resetPin ? req.body.resetPin : null,
+            isActive: 1,
+            last_login: moment()
         })
         return res.status(config.statuslist.default).send(config.responseObj('User added successfully'))
     } catch (e) {
-        console.log(e)
+        console.log('error',e)
         return res.status(config.statuslist.exception).send(config.responseObj(e,'Internal server error'))
     }
 
 }
 
-UsersControllers.UserLogin = async (req, res, next) => {
-    if (_.isNil(req.body.email)) {
-        return res.status(404).send({
-            responseText: 'Admin Email is required'
-        })
+UserServices.UserLogin = async (req, res, next) => {
+    if (_.isNil(req.body.username)) {
+        return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'Username is required'))
     }
 
-    if (_.isNil(req.body.password)) {
-        return res.status(404).send({
-            responseText: 'Admin Password is required'
-        })
+    if (_.isNil(req.body.Password)) {
+        return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'Password is required'))
     }
 
-    //let College_ID = await commonFunction.createCollegeID(req.body.College_Name, req.body.College_state)
     try {
-        let User = await Models.UserSchema.findOne({
+        let User = await Models.users.findOne({
             where: {
-                User_ID: req.body.email
+                userid: req.body.username
             },
-            include:[{model: Models.UserDetailsSchema, required:false}]
+            include:[{model: Models.userProfile, required:false,attributes: ['name','address','email','mobile','city']}]
         })
 
         User = User.get({plain: true})
@@ -105,13 +81,13 @@ UsersControllers.UserLogin = async (req, res, next) => {
         }
 
 
-        let isChecked = await commonFunction.checkPassword(req.body.password, User.Password);
+        let isChecked = await commonFunction.checkPassword(req.body.Password, User.Password);
 
 
         if (isChecked) {
-            let dataToEncrypt = { ...{ City_code: User.City_code, User_ID: User.User_ID } }
+            let dataToEncrypt = { ...{ id: User.id, userid: User.userid } }
 
-            User = _.omit(User, ['Password', 'User_ID', 'City_code', 'createdAt', 'updatedAt']);
+            User = _.omit(User, ['id','Password', 'userid', 'isActive','resetPin','last_login', 'createdAt', 'updatedAt']);
 
 
             User.token = await auth.createAuthToken(dataToEncrypt);
@@ -125,7 +101,7 @@ UsersControllers.UserLogin = async (req, res, next) => {
 }
 
 
-UsersControllers.AdminMobileLogin = async (req, res, next) => {
+UserServices.AdminMobileLogin = async (req, res, next) => {
     if (_.isNil(req.body.MobileNo)) {
         return res.status(404).send({
             responseText: 'Mobile no is required'
@@ -182,7 +158,7 @@ UsersControllers.AdminMobileLogin = async (req, res, next) => {
     }
 }
 
-UsersControllers.ForgotPassword = async (req,res,next) =>{
+UserServices.ForgotPassword = async (req,res,next) =>{
     if(_.isNil(req.body.email)){
         return res.status(config.statuslist.notFound).send(config.responseObj(undefined,'Email is required'))
     }
@@ -225,9 +201,29 @@ UsersControllers.ForgotPassword = async (req,res,next) =>{
     }catch(error){
         return res.status(config.statuslist.exception).send(config.responseObj(error,'Internal server error'))
     }
-
-
-
 }
 
-module.exports = UsersControllers
+UserServices.DeleteUser = async(req,res,next) =>{
+    Promise.all([
+        Models.users.delete({
+            where:{
+                userid : req.body.userid
+            }
+        }),
+        Models.userProfile.delete({
+            where:{
+                userid : req.body.userid
+            }
+        })
+    ])
+    .then(isdelete =>{
+        if(isdelete){
+            return res.status(config.statuslist.default).send(config.responseObj(undefined,'User data is deleted'))
+        }
+    }).catch((error)=>{
+        return res.status(config.statuslist.exception).send(config.responseObj(undefined,'Internal server occured'))
+    })
+}
+
+
+module.exports = UserServices

@@ -6,7 +6,7 @@ const sequelize = new Sequelize(process.env.DB_DATABASE, process.env.DB_USER, pr
     host: process.env.DB_HOST,
     dialect: 'mysql', //| 'sqlite' | 'postgres' | 'mssql',
     operatorsAliases: '0',
-    logging: false,
+    logging: true,
     pool: {
         max: 5,
         min: 0,
