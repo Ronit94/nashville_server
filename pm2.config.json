@@ -1,0 +1,51 @@
+{
+    "apps": [
+        {
+            "name": "NashvileServer",
+            "script": "bin/www",
+            "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+            "watch": true,
+            "watch_options": {
+                "usePolling": true,
+                "alwaysStat": true,
+                "useFsEvents": false
+            },
+            "ignore_watch": [
+                "nbproject",
+                "uploads",
+                "log",
+                "logs",
+                "public",
+                "test",
+                "static",
+                "browser",
+                "node_modules",
+                "files",
+                ".git"
+            ],
+            "instances": 1,
+            "exec_mode": "fork",
+            "log_file": "log/pm2_log.log",
+            "out_file": "log/pm2_out.log",
+            "error_file": "log/pm2_err.log",
+            "env": {
+                "PORT": "4008",
+                "NODE_ENV": "development",
+                "DEBUG": "NashvileServer:*",
+                "GIT_BRANCH": "staging"
+            },
+            "env_production": {
+                "PORT": "4008",
+                "NODE_ENV": "production",
+                "DEBUG": "NashvileServer:*",
+                "GIT_BRANCH": "staging"
+            },
+            "args": "DEBUG=NashvileServer:*",
+            "post_update": [
+                "echo App has been updated, running npm install...",
+                "npm install",
+                "echo App is being restarted now"
+            ]
+        }
+    ]
+}
