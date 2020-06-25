@@ -53,7 +53,7 @@ AdminServices.AddAdmin = async (req,res,next)=>{
 
         let isCreated = await Models.admins.create({
             adminid: req.body.email,
-            name: req.body.email,
+            name: req.body.name,
             Password : hash,
             email: req.body.email,
             mobile : req.body.mobile,
@@ -106,8 +106,21 @@ AdminServices.AdminLogin = async (req,res,next) =>{
 
         if(isPasswordmatch){
             let dataToEncrypt = { ...{ id: admin.id, adminid: admin.adminid } }
-            admin = _.omit(admin, ['Password', 'adminid', 'createdAt', 'updatedAt']);
+            admin = _.omit(admin, ['íd','Password', 'adminid', 'createdAt', 'updatedAt']);
             admin.token = await auth.createAuthToken(dataToEncrypt);
+            await Models.admins.update({
+                loggedin:1 
+            },{
+                where:{
+                    [Op.or]: [
+                        {
+                            adminid: req.body.email
+                        }, {
+                            mobile : req.body.mobile
+                        }
+                    ]
+                }
+            })
             return res.status(config.statuslist.default).send(config.responseObj(admin,'User logged in'))
         }else{
             return res.status(config.statuslist.unprocessEntity).send(config.responseObj(undefined,'Password is wrong'))
@@ -116,10 +129,54 @@ AdminServices.AdminLogin = async (req,res,next) =>{
         console.log(error)
         return res.status(config.statuslist.exception).send(config.responseObj(error,"Internal server error"))
     }
+}
 
+AdminServices.UpdateAdmin = async(req,res,next) =>{
+    let obj = {};
 
+    if(!_.isNil(req.body.name)){
+        obj['name'] = req.body.name
+    }
 
-    return res.status(config.statuslist.default).send(config.responseObj(undefined,'Ok'))
+    if(!_.isNil(req.body.email)){
+        obj['email'] = obj['adminid'] = req.body.email
+    }
+
+    if(!_.isNil(req.body.Password)){
+        obj['Password'] = commonFunction.createHashPassword(req.body.Password)
+    }
+
+    if(!_.isNil(req.body.mobile)){
+        obj['mobile'] = req.body.mobile
+    }
+
+    if(!_.isNil(req.body.resetPin)){
+        obj['resetPin'] = req.body.resetPin
+    }
+
+    try{
+
+        let isUpdate = await Models.admins.update(obj,{
+            where:{
+                [Op.or]: [
+                    {
+                        adminid: req.userdetails.adminid
+                    }, {
+                        mobile : req.userdetails.mobile
+                    }
+                ]
+            }
+        })
+
+        if(isUpdate){
+            return res.status(config.statuslist.default).send(config.responseObj(undefined,"Admin data updated"))
+        }else{
+            return res.status(config.statuslist.unprocessEntity).send(config.responseObj(undefined,"Admin data is not updated"))
+        }
+    }catch(error){
+        return res.status(config.statuslist.exception).send(config.responseObj(error,"Internal server error"))
+    }
+
 }
 
 module.exports = AdminServices
